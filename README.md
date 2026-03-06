@@ -228,3 +228,159 @@ java -cp ".:mysql-connector-java-8.x.x.jar:src" Main
 **개발 팀**: aibe5_Team2  
 **개발 기간**: 2024.03  
 **문의**: [이메일 주소 또는 이슈 트래커]
+
+---
+
+## 🛠️ 트러블슈팅 일지
+
+### 📅 2026-03-06
+
+---
+
+#### 1. MySQL root 계정 비밀번호 오류 (Access Denied)
+
+**증상**
+```
+Cannot Connect to Database Server
+Access denied for user 'root'@'localhost' (using password: NO)
+Access denied for user 'root'@'localhost' (using password: YES)
+```
+
+**원인**
+- MySQL 설치 시 설정한 root 비밀번호를 모르는 상태
+- `db.properties`의 `db.password`가 비어있어 연결 실패
+
+**해결 방법**
+1. 관리자 권한 PowerShell에서 MySQL 서비스 중지
+   ```powershell
+   Stop-Service MySQL_Eden
+   ```
+2. `--skip-grant-tables` 옵션으로 인증 없이 MySQL 임시 실행
+   ```powershell
+   & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe" --defaults-file="C:\ProgramData\MySQL\MySQL Server 8.0\my.ini" --skip-grant-tables --shared-memory
+   ```
+3. 새 터미널에서 비밀번호 없이 접속 후 비밀번호 변경
+   ```powershell
+   & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root
+   ```
+   ```sql
+   FLUSH PRIVILEGES;
+   ALTER USER 'root'@'localhost' IDENTIFIED BY '1234';
+   FLUSH PRIVILEGES;
+   EXIT;
+   ```
+4. 임시 mysqld 종료 (`Ctrl+C`) 후 서비스 재시작
+   ```powershell
+   Start-Service MySQL_Eden
+   ```
+5. `db.properties` 비밀번호 업데이트
+   ```properties
+   db.password=1234
+   ```
+
+---
+
+#### 2. pom.xml 설정 오류 (exec-maven-plugin 중복, packaging 오류)
+
+**증상**
+```
+[ERROR] Duplicated plugin declaration in pom.xml
+```
+
+**원인**
+- `pom.xml`에 `exec-maven-plugin`이 두 번 선언되어 있음
+- `<packaging>war</packaging>` 로 잘못 설정되어 콘솔 앱에 부적합
+
+**해결 방법**
+- `<packaging>war</packaging>` → `<packaging>jar</packaging>` 변경
+- 중복된 `exec-maven-plugin` 블록 제거 (commandlineArgs 포함 버전 삭제)
+
+---
+
+#### 3. 한글 깨짐 현상 (터미널 인코딩)
+
+**증상**
+```
+=== ??? ???? ?? === (한글이 모두 깨져서 출력)
+```
+
+**원인**
+- Windows PowerShell의 기본 코드페이지가 CP949(MS949)
+- Java 소스코드와 class 파일은 UTF-8
+- 터미널 출력 인코딩이 맞지 않아 한글 깨짐 발생
+
+**해결 방법**
+- 실행 전 터미널 코드페이지를 UTF-8(65001)로 변경
+  ```powershell
+  chcp 65001
+  mvn compile exec:java "-Dfile.encoding=UTF-8"
+  ```
+
+---
+
+#### 4. MySQL 서비스 이름 확인 방법
+
+**상황**
+- MySQL Workbench에 연결 설정은 있었으나 접속이 안 됨
+- MySQL 서비스 이름이 기본 `MySQL`이 아닌 `MySQL_Eden`으로 설치되어 있었음
+
+**확인 방법**
+```powershell
+Get-Service | Where-Object {$_.Name -like "*mysql*"}
+# 결과: MySQL_Eden (Running)
+```
+
+**서비스 경로 확인**
+```powershell
+Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\MySQL_Eden" | Select-Object -ExpandProperty ImagePath
+```
+
+---
+
+## 📚 오늘 배운 것 (2026-03-06)
+
+### 1. Maven이란?
+- Java 프로젝트의 **빌드 자동화 도구**
+- `pom.xml`에 의존성(라이브러리)을 선언하면 인터넷에서 **자동 다운로드**
+- 직접 `.jar` 파일을 받아서 경로 설정할 필요 없음
+- 핵심 명령어:
+  ```powershell
+  mvn compile          # Java 파일 컴파일
+  mvn exec:java        # Main 클래스 실행
+  mvn compile exec:java "-Dfile.encoding=UTF-8"  # 컴파일 + 실행
+  ```
+
+### 2. JDBC 드라이버란?
+```
+Java 프로그램  ←→  [JDBC 드라이버]  ←→  MySQL DB
+```
+- Java는 MySQL과 직접 통신 불가 → **JDBC 드라이버(번역기)** 필요
+- `pom.xml`에 한 줄 선언만으로 Maven이 자동 설치해줌
+  ```xml
+  <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <version>8.0.33</version>
+  </dependency>
+  ```
+
+### 3. GitHub 협업 흐름 (브랜치 전략)
+- `main` 브랜치: 완성된 코드만 병합
+- 각자 `feature/이름` 또는 `이름` 브랜치에서 개발
+- 개발 완료 → **Pull Request(PR)** 생성 → 팀원 **코드 리뷰** → `main`에 **머지**
+- 현재 브랜치 구조:
+  ```
+  main              ← 팀 공통 브랜치
+  hylee             ← 개인 작업 브랜치 (현재)
+  feature/count-increment
+  ```
+
+### 4. MySQL skip-grant-tables 비밀번호 리셋
+- 비밀번호를 잊었을 때 인증 없이 MySQL을 임시 실행하는 방법
+- `--skip-grant-tables`: 권한 테이블 검사를 건너뜀
+- 반드시 임시 실행 종료 후 정상 서비스로 재시작해야 함
+
+### 5. Windows PowerShell 인코딩
+- Windows 기본 코드페이지: **CP949(MS949)** - 한국어 Windows 기본값
+- UTF-8 코드페이지: **65001**
+- `chcp 65001` 명령으로 현재 세션 인코딩을 UTF-8로 변경 가능

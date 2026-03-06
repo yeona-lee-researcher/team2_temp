@@ -10,8 +10,7 @@ public class App {
     private boolean running;
     
     // Repository 인스턴스들
-    private ComicRepository comicRepository;    git checkout -b hylee-v2
-    git push -u origin hylee-v2
+    private ComicRepository comicRepository;
     private MemberRepository memberRepository;
     private RentalRepository rentalRepository;
     

@@ -27,15 +27,15 @@ public class DBUtil {
         try (FileInputStream fis = new FileInputStream(DB_PROPERTIES_FILE)) {
             props.load(fis);
             
-            DB_URL = props.getProperty("db.url", "jdbc:mysql://localhost:3306/comic_rental?serverTimezone=UTC&characterEncoding=UTF-8");
+            DB_URL = props.getProperty("db.url", "jdbc:mysql://localhost:3306/comic_rental?serverTimezone=UTC&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true");
             DB_USERNAME = props.getProperty("db.username", "root");
             DB_PASSWORD = props.getProperty("db.password", "");
             DB_DRIVER = props.getProperty("db.driver", "com.mysql.cj.jdbc.Driver");
             
         } catch (IOException e) {
-            // 설정 파일이 없으면 기본값 사용
-            System.out.println("DB 설정 파일을 찾을 수 없습니다. 기본 설정을 사용합니다.");
-            DB_URL = "jdbc:mysql://localhost:3306/comic_rental?serverTimezone=UTC&characterEncoding=UTF-8";
+            // 설정 파일이 없으면 기본값 사용 (MySQL)
+            System.out.println("DB 설정 파일을 찾을 수 없습니다. MySQL 기본 설정을 사용합니다.");
+            DB_URL = "jdbc:mysql://localhost:3306/comic_rental?serverTimezone=UTC&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true";
             DB_USERNAME = "root";
             DB_PASSWORD = "";
             DB_DRIVER = "com.mysql.cj.jdbc.Driver";
